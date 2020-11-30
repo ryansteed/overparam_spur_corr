@@ -20,7 +20,7 @@ celebA:
 	unzip celeba-dataset.zip -d celebA/data
 	rm celeba-dataset.zip
 	cd celebA/data
-	-mv img_align_celeba/img_align_celeba img_align_celeba-b && rm -rf img_align_celeba && mv img_align_celeba-b img_align_celeba
+	mv celebA/data/img_align_celeba/img_align_celeba celebA/data/img_align_celeba-b && rm -rf celebA/data/img_align_celeba && mv celebA/data/img_align_celeba-b celebA/data/img_align_celeba
 
 cub:
 	curl http://downloads.cs.stanford.edu/nlp/data/dro/waterbird_complete95_forest2water2.tar.gz \
