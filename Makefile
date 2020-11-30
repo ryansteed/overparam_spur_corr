@@ -1,5 +1,7 @@
 all: clean install celebA cub
-.PHONY: all install clean
+.PHONY: all install clean data
+
+data: celebA cub
 
 install:
 	pip install -r requirements.txt
