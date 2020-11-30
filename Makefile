@@ -12,8 +12,8 @@ clean:
 
 celebA:
 	pip install kaggle
-	-mkdir ~/.kaggle
-	cp kaggle.json ~/.kaggle || $(error Please download your kaggle API token and add it to this directory)
+	mkdir ~/.kaggle || echo Warning: could not create kaggle token dir, make sure ~/.kaggle already exists.
+	cp kaggle.json ~/.kaggle
 	chmod 600 ~/.kaggle/kaggle.json
 	kaggle datasets download -d 'jessicali9530/celeba-dataset'
 	mkdir celebA
