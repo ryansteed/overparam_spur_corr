@@ -2,6 +2,9 @@ import numpy as np
 import argparse
 from toy_example_data import *
 from random_feature_utils import *
+import warnings
+warnings.filterwarnings("error")
+from sklearn.exceptions import ConvergenceWarning
 
 def main():
     parser = argparse.ArgumentParser()
@@ -31,36 +34,52 @@ def main():
     parser.add_argument('--model_file')
     parser.add_argument('-q', '--quiet', action='store_true')
     parser.add_argument('-s', '--seed', type=int, default=0)
+    parser.add_argument('--replicates', type=int, default=3)
     args = parser.parse_args()
 
     np.random.seed(args.seed)
 
     process_args(args)
 
+    results = []
+    for N in args.n_random_features:
+        print(N)
+        seed = args.seed
+        success = 0
+        while success < args.replicates:
+            np.random.seed(seed)
+            try:
+                if args.random_features:
+                    full_data, n_groups = generate_toy_data(args.data_generation_fn, args.data_args)
+                    erm_error, over_error, under_error = run_random_features_model(full_data=full_data,
+                        n_groups=n_groups,
+                        N=N,
+                        fit_model_fn=args.fit_model_fn,
+                        error_fn=args.error_fn,
+                        model_kwargs=args.model_kwargs,
+                        verbose=(not args.quiet))
+                else:
+                    erm_error, over_error, under_error = run_no_projection_model(data_generation_fn=args.data_generation_fn,
+                        data_args=args.data_args,
+                        N=N,
+                        fit_model_fn=args.fit_model_fn,
+                        error_fn=args.error_fn,
+                        model_kwargs=args.model_kwargs,
+                        verbose=(not args.quiet),
+                        model_file=args.model_file)
+                for opt_type, error in zip(['ERM', 'oversample', 'undersample'], [erm_error, over_error, under_error]):
+                    error['opt_type'] = opt_type
+                    error['seed'] = seed
+                    error['N'] = N
+                    results.append(error)
+                success += 1
+            except ConvergenceWarning:
+                print('did not converge. moving on')
+                pass
+            seed += 1
 
-    if args.random_features:
-        full_data, n_groups = generate_toy_data(args.data_generation_fn, args.data_args)
-        erm_error, over_error, under_error = run_random_features_model(full_data=full_data,
-            n_groups=n_groups,
-            N=args.n_random_features,
-            fit_model_fn=args.fit_model_fn,
-            error_fn=args.error_fn,
-            model_kwargs=args.model_kwargs,
-            verbose=(not args.quiet))
-    else:
-        erm_error, over_error, under_error = run_no_projection_model(data_generation_fn=args.data_generation_fn,
-            data_args=args.data_args,
-            N=args.n_random_features,
-            fit_model_fn=args.fit_model_fn,
-            error_fn=args.error_fn,
-            model_kwargs=args.model_kwargs,
-            verbose=(not args.quiet),
-            model_file=args.model_file)
-       
-    save_error_logs(args.outfile,
-        [erm_error, over_error, under_error],
-        ['ERM', 'oversample', 'undersample'])
-
+    results_df = pd.DataFrame(results)
+    results_df.to_csv(args.outfile, index=False)
 
 def process_args(args):
     # model
@@ -87,8 +106,6 @@ def process_args(args):
         random_features = False
 
     assert len(args.n_random_features)>0
-    if len(args.n_random_features)==1:
-        args.n_random_features = args.n_random_features[0]
 
     data_args = {}
     for argname in required_args:
